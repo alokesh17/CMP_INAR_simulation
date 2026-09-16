@@ -24,10 +24,14 @@ computed identically across all four models.
 
 Authors: Alokesh Manna, Dipak K. Dey, Víctor Lachos.
 
+The manuscript itself is kept in a separate, not-yet-public location and is
+not part of this repository; this repo is the reproducible code (Stan model
++ R pipeline) behind it.
+
 ## Repository layout
 
 ```
-cmp-inar/
+CMP_INAR_simulation/
 ├── stan/
 │   ├── ZIINAR1-CMP-fast-reparam.stan   <- THE model every script uses
 │   └── ZIINAR1-CMP-fast.stan           <- legacy natural parameterization (reference only)
@@ -43,22 +47,28 @@ cmp-inar/
 │   ├── real_data_analysis_polio_campy.R <- companion real-data script: polio, campylobacterosis
 │   ├── forecast_evaluation.R           <- Table 4: out-of-sample forecasting evaluation
 │   └── predictive_analysis.R           <- posterior predictive checks (Section 3.4 worked example)
-├── paper/
-│   ├── cmp-inar-draft.tex              <- THE paper (current full draft)
-│   ├── cmp-inar-theory-section.tex     <- standalone theory notes (attribution-labeled; folded into draft)
-│   ├── cmp-inar-realdata-section.tex   <- standalone real-data notes (superseded by paper draft Section 5)
-│   └── Bib_projeto_pesq.bib            <- shared bibliography
 └── docs/
     └── review_response_summary.md      <- notes on responses to review/feedback
 ```
 
-`cmp-inar-draft.tex` is the paper to compile; the two other `paper/*.tex`
-files are earlier standalone notes that were folded into it and are kept for
-reference/attribution history, not meant to be compiled as the paper itself.
+## Getting started
 
-## Requirements
+### 1. Download the repository
 
-R (>= 4.0) with:
+Clone it with git (recommended, so you can pull future updates):
+
+```
+git clone https://github.com/<your-username>/CMP_INAR_simulation.git
+cd CMP_INAR_simulation
+```
+
+Or, if you just want a one-off copy without git: on the repo's GitHub page,
+click **Code -> Download ZIP**, then unzip it and `cd` into the folder.
+
+### 2. Install R and the required packages
+
+Requires R (>= 4.0), a C++ toolchain (needed by `rstan` to compile Stan
+models), and:
 
 ```r
 install.packages(c("rstan", "COMPoissonReg", "matrixStats",
@@ -69,12 +79,40 @@ install.packages("ZIHINAR1")
 # remotes::install_github("fushengyy/ZIHINAR1")
 ```
 
-A working `pdflatex` + `bibtex` toolchain to compile `paper/cmp-inar-draft.tex`.
+On macOS, `rstan` additionally needs Xcode command line tools
+(`xcode-select --install`) and, for best performance, a configured
+`~/.R/Makevars` — see the RStan getting-started guide if `install.packages("rstan")`
+fails to compile:
+https://github.com/stan-dev/rstan/wiki/RStan-Getting-Started
 
-All R scripts expect to be run from a working directory that also contains
-`ZIINAR1-CMP-fast-reparam.stan` (i.e., either run from `R/` with the Stan file
-copied alongside, or adjust `STAN_FILE`/`CMP_STAN_FILE` to a relative path
-such as `"../stan/ZIINAR1-CMP-fast-reparam.stan"`).
+### 3. Point the scripts at the Stan model
+
+Every script in `R/` compiles `ZIINAR1-CMP-fast-reparam.stan` via a
+`STAN_FILE` (or `CMP_STAN_FILE`) variable near the top. The simplest setup is
+to run scripts from inside `R/` with a copy of (or symlink to) the Stan file
+alongside them:
+
+```
+cd R
+ln -s ../stan/ZIINAR1-CMP-fast-reparam.stan .
+```
+
+or just edit that variable at the top of whichever script you're running to
+point at `"../stan/ZIINAR1-CMP-fast-reparam.stan"`.
+
+### 4. Run something small first
+
+Before any full run, open `R/run_simulation_grid.R` and set
+`RUN_MODE <- "quick"` (already the safest default in most scripts), then:
+
+```
+Rscript run_simulation_grid.R
+```
+
+This should compile the Stan model (can take a minute or two the first
+time) and finish a tiny 1-cell, 3-replicate run in well under a minute. If
+that works, the environment is set up correctly and you can move on to the
+full pipeline below.
 
 ## What to run, in order
 
@@ -95,16 +133,16 @@ such as `"../stan/ZIINAR1-CMP-fast-reparam.stan"`).
    interrupted extended grid. Emits `compare_summary_table.csv`,
    `compare_win_rate.csv`, and ready-to-paste LaTeX table bodies.
 
-3. **Real-data application (Section 5).**
+3. **Real-data application.**
    `R/real_data_analysis.R` fits ZICMP/ZIP/ZINB/ZIGP to four real series
    (sexoffences, family violence, workers'-compensation claims, soap sales)
    and emits posterior estimate and model-comparison LaTeX table bodies.
    `R/real_data_analysis_polio_campy.R` does the same for two additional
    series (US poliomyelitis, Quebec campylobacterosis), including the
    lambda-reliability and nu-CI-excludes-1 diagnostics used to decide whether
-   a series's results are numerically trustworthy enough for the main text.
+   a series's results are numerically trustworthy.
 
-4. **Out-of-sample forecasting (Table 4).**
+4. **Out-of-sample forecasting.**
    `R/forecast_evaluation.R`. Trains each model on the first 80% of each
    series, forecasts the held-out 20% one step ahead, and reports LPS, MAE,
    RMSE, coverage, and zero-event Brier score. Includes a self-check that
@@ -116,14 +154,9 @@ such as `"../stan/ZIINAR1-CMP-fast-reparam.stan"`).
    `R/make_sim_figures.R` (or the Python port `make_sim_figures.py`) builds
    the win-rate and comparison figures from the CSVs produced in steps 1-2.
 
-6. **Compile the paper.**
-   ```
-   cd paper
-   pdflatex -interaction=nonstopmode cmp-inar-draft.tex
-   bibtex cmp-inar-draft
-   pdflatex -interaction=nonstopmode cmp-inar-draft.tex
-   pdflatex -interaction=nonstopmode cmp-inar-draft.tex
-   ```
+Every script prints its progress to the console and checkpoints intermediate
+results to `.rds`/`.csv` files in whatever directory you run it from, so
+long grid runs can be interrupted and picked back up (see the Notes below).
 
 ## Notes
 
@@ -140,3 +173,6 @@ such as `"../stan/ZIINAR1-CMP-fast-reparam.stan"`).
 - This repository does not yet include a LICENSE file. Add one (or ask your
   co-authors/institution what's appropriate) before making the repo public,
   since the default with no LICENSE is "all rights reserved."
+- This repo is currently **private**. If you make it public later, double
+  check `git log --stat` first to confirm no unpublished paper draft or
+  results you don't want public ended up in the history.
