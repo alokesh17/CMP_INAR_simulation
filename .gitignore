@@ -1,0 +1,40 @@
+# R
+.Rhistory
+.RData
+.Rproj.user/
+*.Rproj
+
+# Compiled Stan models
+*.rds
+
+# Generated CSV/output tables (reproducible from scripts)
+*_partial.rds
+*_final.rds
+sim_*.csv
+compare_*.csv
+real_data_*.csv
+fits_*.rds
+
+# LaTeX build artifacts
+*.aux
+*.bbl
+*.blg
+*.log
+*.out
+*.toc
+*.fls
+*.fdb_latexmk
+*.synctex.gz
+*.nav
+*.snm
+
+# Compiled PDFs (regenerate via pdflatex; comment out to track them instead)
+*.pdf
+
+# Python
+__pycache__/
+*.pyc
+
+# OS
+.DS_Store
+paper/
